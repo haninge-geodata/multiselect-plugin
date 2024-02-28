@@ -548,7 +548,7 @@ const Multiselect = function Multiselect(options = {}) {
     // Is an array of arrays, we want an array.
     const allItems = items.flat();
 
-    // Narrow down selection to only contain thos whose actual geometry intersects the selection geometry.
+    // Narrow down selection to only contain those whose actual geometry intersects the selection geometry.
     // We could implement different spatial relations, i.e contains, is contained etc. But for now only intersect is supported.
     const intersectingItems = getItemsIntersectingGeometry(allItems, geometry);
 
@@ -723,7 +723,7 @@ const Multiselect = function Multiselect(options = {}) {
       const isCtrlKeyPressed = evt.originalEvent.ctrlKey;
 
       if (currentLayerConfig.layers) {
-        // If configured with specific layers, we can't use the featureInfo functions to fecth features as they honour visibility
+        // If configured with specific layers, we can't use the featureInfo functions to fetch features as they honour visibility
         const resolution = map.getView().getResolution();
         const point = new Origo.ol.geom.Point(evt.coordinate);
         // Buffer the point to make it emulate featureInfo radius.
@@ -741,38 +741,41 @@ const Multiselect = function Multiselect(options = {}) {
         const coordinate = evt.coordinate;
         const queryableLayers = viewer.getQueryableLayers(true);
         const layers = queryableLayers.filter((layer) => !shouldSkipLayer(layer));
-        const clientResult = Origo.getFeatureInfo.getFeaturesAtPixel({
-          coordinate,
-          map,
-          pixel,
-          clusterFeatureinfoLevel,
-          hitTolerance
-        }, viewer);
-        // Abort if clientResult is false
-        if (clientResult !== false) {
-          Origo.getFeatureInfo.getFeaturesFromRemote({
+        // Don't perform a click if there are no layers to query
+        if (layers.length > 0) {
+          const clientResult = Origo.getFeatureInfo.getFeaturesAtPixel({
             coordinate,
-            layers,
             map,
-            pixel
-          }, viewer)
-            .then((data) => {
-              const serverResult = data || [];
-              const result = serverResult.concat(clientResult);
-              if (isCtrlKeyPressed) {
-                if (result.length > 0) {
-                  selectionManager.removeItems(result);
+            pixel,
+            clusterFeatureinfoLevel,
+            hitTolerance
+          }, viewer);
+          // Abort if clientResult is false
+          if (clientResult !== false) {
+            Origo.getFeatureInfo.getFeaturesFromRemote({
+              coordinate,
+              layers,
+              map,
+              pixel
+            }, viewer)
+              .then((data) => {
+                const serverResult = data || [];
+                const result = serverResult.concat(clientResult);
+                if (isCtrlKeyPressed) {
+                  if (result.length > 0) {
+                    selectionManager.removeItems(result);
+                  }
+                } else if (result.length === 1) {
+                  selectionManager.addOrHighlightItem(result[0]);
+                } else if (result.length > 1) {
+                  selectionManager.addItems(result);
                 }
-              } else if (result.length === 1) {
-                selectionManager.addOrHighlightItem(result[0]);
-              } else if (result.length > 1) {
-                selectionManager.addItems(result);
-              }
-              const modalLinks = document.getElementsByClassName('o-identify-link-modal');
-              for (let i = 0; i < modalLinks.length; i += 1) {
-                viewer.getFeatureinfo().addLinkListener(modalLinks[i]);
-              }
-            });
+                const modalLinks = document.getElementsByClassName('o-identify-link-modal');
+                for (let i = 0; i < modalLinks.length; i += 1) {
+                  viewer.getFeatureinfo().addLinkListener(modalLinks[i]);
+                }
+              });
+          }
         }
         return false;
       }
@@ -814,7 +817,7 @@ const Multiselect = function Multiselect(options = {}) {
   }
 
   /**
-   * Eventhandler for click when selecting by feature. Selects the feature to select by. If click hits severat features
+   * Eventhandler for click when selecting by feature. Selects the feature to select by. If click hits several features
    * a modal is displayed.
    * @param {any} evt
    */
