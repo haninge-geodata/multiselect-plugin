@@ -137,9 +137,9 @@ const Multiselect = function Multiselect(options = {}) {
       });
       const featureSelectors = document.getElementsByClassName('featureSelectorItem');
 
-      for (let index = 0; index < featureSelectors.length; index++) {
+      for (let index = 0; index < featureSelectors.length; index += 1) {
         const f = featureSelectors[index];
-        f.addEventListener('click', function (e) {
+        f.addEventListener('click', (e) => {
           bufferFeature = features.find((ff) => ff.getId().toString() === this.id).clone();
           modal.closeModal();
           resolve();
@@ -148,7 +148,7 @@ const Multiselect = function Multiselect(options = {}) {
           temporaryLayer.clear();
           e.stopPropagation();
         });
-        f.addEventListener('mouseover', function () {
+        f.addEventListener('mouseover', () => {
           const hoverFeature = features.find((ff) => ff.getId().toString() === this.id).clone();
           displayTemporaryFeature(hoverFeature, chooseSymbol);
         });
@@ -560,7 +560,7 @@ const Multiselect = function Multiselect(options = {}) {
     // Check if we actually can load async content. createContentAsync is a quite recent addition to Origo.
     if (items.length > 0 && typeof items[0].createContentAsync === 'function') {
       const requests = [];
-      items.forEach(currItem => {
+      items.forEach((currItem) => {
         requests.push(currItem.createContentAsync());
       });
       // Wait for all requests. If there are no attachments configured there will be no request sent
@@ -572,8 +572,6 @@ const Multiselect = function Multiselect(options = {}) {
       }
     }
   }
-
-
 
   /**
    * Gets all features from the eligable layers intersecting the geometry and adds (or remove) them to SelectionManager.
@@ -595,7 +593,7 @@ const Multiselect = function Multiselect(options = {}) {
        * @param {any} layers
        * @param {any} groupLayer
        */
-      function traverseLayers(tLayers, groupLayer) {
+      const traverseLayers = (tLayers, groupLayer) => {
         for (let i = 0; i < tLayers.length; i += 1) {
           const currLayer = tLayers[i];
           if (!shouldSkipLayer(currLayer)) {
@@ -612,7 +610,7 @@ const Multiselect = function Multiselect(options = {}) {
             }
           }
         }
-      }
+      };
 
       if (currentLayerConfig.layers) {
         // Use configured layers
