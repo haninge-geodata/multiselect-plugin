@@ -323,17 +323,18 @@ const Multiselect = function Multiselect(options = {}) {
     let selectionGroup;
     let selectionGroupTitle;
     let selectedItems = [];
+    const layerToQuery = viewer.getLayer(layer.get('featureinfoLayer')) || layer;
 
     if (groupLayer) {
       selectionGroup = groupLayer.get('name');
       selectionGroupTitle = groupLayer.get('title');
     } else {
-      selectionGroup = layer.get('name');
-      selectionGroupTitle = layer.get('title');
+      selectionGroup = layerToQuery.get('name');
+      selectionGroupTitle = layerToQuery.get('title');
     }
 
     // First see if we have a config that decides where to query
-    const currLayerConfig = alternativeLayerConfiguration.find((i) => i.name === layer.get('name'));
+    const currLayerConfig = alternativeLayerConfiguration.find((i) => i.name === layerToQuery.get('name'));
     // If layer is configured to do something special, obey that. Otherwise default to something.
     if (currLayerConfig) {
       const promises = [];
@@ -343,8 +344,8 @@ const Multiselect = function Multiselect(options = {}) {
           // Try to use same filter on queryInfoLayer as the original layer. Probably only works for simple filters on same type of server when
           // original layer is WMS and query layer is WFS, which happens to be the problem we're solving.
           // getParams only exists on WMS layers
-          if (layer.getSource().getParams && !currLayerConfig.disableFilterHandling) {
-            const params = layer.getSource().getParams();
+          if (layerToQuery.getSource().getParams && !currLayerConfig.disableFilterHandling) {
+            const params = layerToQuery.getSource().getParams();
             // TODO: get param name from layer's source "type", itroduced in 1407
             //       Awaits that the getSourceType utility function is exposed in api. Right now it is hidden inside print-resize.js
             // If the WMS layer has a filter, use the same filter on th WFS layer which is queried.
@@ -366,22 +367,22 @@ const Multiselect = function Multiselect(options = {}) {
           console.error(e);
         }
       }
-    } else if (layer.getSource().forEachFeatureIntersectingExtent) {
+    } else if (layerToQuery.getSource().forEachFeatureIntersectingExtent) {
       // check if layer supports this method, or basically is some sort of vector layer.
       // Alternatively we can check layer.getType() === 'VECTOR', but a bit unsure if all types of vector layer have 'VECTOR' as type.
       // Basically here we get all vector features from client.
-      if (currentLayerConfig.layers && layer.get('type') === 'WFS' && layer.get('strategy') !== 'all') {
+      if (currentLayerConfig.layers && layerToQuery.get('type') === 'WFS' && layerToQuery.get('strategy') !== 'all') {
         // If Wfs is using bbox, the features may not have beeen fetched if layer is not visisble or features are out of view.
         // Fetch all intersecting features and add to layer. Then carry on as usual
-        const serverFeatures = await fetchFeaturesFromServer(layer, extent);
-        layer.getSource().addFeatures(serverFeatures);
+        const serverFeatures = await fetchFeaturesFromServer(layerToQuery, extent);
+        layerToQuery.getSource().addFeatures(serverFeatures);
       }
-      layer.getSource().forEachFeatureIntersectingExtent(extent, (feature) => {
+      layerToQuery.getSource().forEachFeatureIntersectingExtent(extent, (feature) => {
         // If clustered features should be supported they should be unwrapped here first.
-        const item = new Origo.SelectedItem(feature, layer, map, selectionGroup, selectionGroupTitle);
+        const item = new Origo.SelectedItem(feature, layerToQuery, map, selectionGroup, selectionGroupTitle);
         selectedItems.push(item);
       });
-    } else if (layer.get('type') === 'WMS') {
+    } else if (layerToQuery.get('type') === 'WMS') {
       if (useWMSFeatureInfo) {
         // Make a featureinfo call and fake a "big" click that covers the entire extenet
         // For some reason a 1x1 map will yield a bunch of false positives. Probably because the server renders surrounding objects
@@ -392,7 +393,7 @@ const Multiselect = function Multiselect(options = {}) {
 
         // Coord and resultion arguments don't matter now. The result of the calculation will be overwritten anyway.
         // This will retain any filter on layer source, whatever they are called, as most arguments are copied from source.
-        const qiUrl = new URL(layer.getSource().getFeatureInfoUrl([0, 0], 100, viewer.getProjection(), {
+        const qiUrl = new URL(layerToQuery.getSource().getFeatureInfoUrl([0, 0], 100, viewer.getProjection(), {
           INFO_FORMAT: 'application/json',
           FEATURE_COUNT: '1000'
         }));
@@ -425,7 +426,7 @@ const Multiselect = function Multiselect(options = {}) {
 
         const newFeatures = viewer.getMapUtils().geojsonToFeature(json);
         newFeatures.forEach((feature) => {
-          const item = new Origo.SelectedItem(feature, layer, map, selectionGroup, selectionGroupTitle);
+          const item = new Origo.SelectedItem(feature, layerToQuery, map, selectionGroup, selectionGroupTitle);
           selectedItems.push(item);
         });
       } else {
@@ -433,7 +434,7 @@ const Multiselect = function Multiselect(options = {}) {
         // It works for geoserver, but technically it is wrong as there is no WFS layer defined in origo.
         // If implementation of origo.getFeature changes, it may break.
         // It is only implemented as it was the default implementation from the start and left for backwards compatibility.
-        const remoteItems = await getRemoteItems(layer, extent, selectionGroup, selectionGroupTitle);
+        const remoteItems = await getRemoteItems(layerToQuery, extent, selectionGroup, selectionGroupTitle);
         // Can't have both local and remote in same layer, so this is safe.
         selectedItems = remoteItems || [];
       }
