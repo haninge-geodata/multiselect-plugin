@@ -137,9 +137,9 @@ const Multiselect = function Multiselect(options = {}) {
       });
       const featureSelectors = document.getElementsByClassName('featureSelectorItem');
 
-      for (let index = 0; index < featureSelectors.length; index++) {
+      for (let index = 0; index < featureSelectors.length; index += 1) {
         const f = featureSelectors[index];
-        f.addEventListener('click', function (e) {
+        f.addEventListener('click', (e) => {
           bufferFeature = features.find((ff) => ff.getId().toString() === this.id).clone();
           modal.closeModal();
           resolve();
@@ -148,7 +148,7 @@ const Multiselect = function Multiselect(options = {}) {
           temporaryLayer.clear();
           e.stopPropagation();
         });
-        f.addEventListener('mouseover', function () {
+        f.addEventListener('mouseover', () => {
           const hoverFeature = features.find((ff) => ff.getId().toString() === this.id).clone();
           displayTemporaryFeature(hoverFeature, chooseSymbol);
         });
@@ -561,7 +561,7 @@ const Multiselect = function Multiselect(options = {}) {
     // Check if we actually can load async content. createContentAsync is a quite recent addition to Origo.
     if (items.length > 0 && typeof items[0].createContentAsync === 'function') {
       const requests = [];
-      items.forEach(currItem => {
+      items.forEach((currItem) => {
         requests.push(currItem.createContentAsync());
       });
       // Wait for all requests. If there are no attachments configured there will be no request sent
@@ -573,8 +573,6 @@ const Multiselect = function Multiselect(options = {}) {
       }
     }
   }
-
-
 
   /**
    * Gets all features from the eligable layers intersecting the geometry and adds (or remove) them to SelectionManager.
@@ -596,7 +594,7 @@ const Multiselect = function Multiselect(options = {}) {
        * @param {any} layers
        * @param {any} groupLayer
        */
-      function traverseLayers(tLayers, groupLayer) {
+      const traverseLayers = (tLayers, groupLayer) => {
         for (let i = 0; i < tLayers.length; i += 1) {
           const currLayer = tLayers[i];
           if (!shouldSkipLayer(currLayer)) {
@@ -613,7 +611,7 @@ const Multiselect = function Multiselect(options = {}) {
             }
           }
         }
-      }
+      };
 
       if (currentLayerConfig.layers) {
         // Use configured layers
@@ -814,7 +812,7 @@ const Multiselect = function Multiselect(options = {}) {
       const isCtrlKeyPressed = evt.originalEvent.ctrlKey;
 
       if (currentLayerConfig.layers) {
-        // If configured with specific layers, we can't use the featureInfo functions to fecth features as they honour visibility
+        // If configured with specific layers, we can't use the featureInfo functions to fetch features as they honour visibility
         const resolution = map.getView().getResolution();
         const point = new Origo.ol.geom.Point(evt.coordinate);
         // Buffer the point to make it emulate featureInfo radius.
@@ -833,50 +831,53 @@ const Multiselect = function Multiselect(options = {}) {
         const coordinate = evt.coordinate;
         const queryableLayers = viewer.getQueryableLayers(true);
         const layers = queryableLayers.filter((layer) => !shouldSkipLayer(layer));
-        const clientResult = Origo.getFeatureInfo.getFeaturesAtPixel({
-          coordinate,
-          map,
-          pixel,
-          clusterFeatureinfoLevel,
-          hitTolerance
-        }, viewer);
-        // Abort if clientResult is false
-        if (clientResult !== false) {
-          showSpinner();
-          Origo.getFeatureInfo.getFeaturesFromRemote({
+        // Don't perform a click if there are no layers to query
+        if (layers.length > 0) {
+          const clientResult = Origo.getFeatureInfo.getFeaturesAtPixel({
             coordinate,
-            layers,
             map,
-            pixel
-          }, viewer)
-            .then((data) => {
-              const serverResult = data || [];
-              const result = serverResult.concat(clientResult);
-              if (result.length === 0) {
-                // Notify user if result was empty to avoid them waiting for ever
-                showEmptyResultModal();
-              }
-              if (isCtrlKeyPressed) {
-                if (result.length > 0) {
-                  selectionManager.removeItems(result);
+            pixel,
+            clusterFeatureinfoLevel,
+            hitTolerance
+          }, viewer);
+          // Abort if clientResult is false
+          if (clientResult !== false) {
+            showSpinner();
+            Origo.getFeatureInfo.getFeaturesFromRemote({
+              coordinate,
+              layers,
+              map,
+              pixel
+            }, viewer)
+              .then((data) => {
+                const serverResult = data || [];
+                const result = serverResult.concat(clientResult);
+                if (result.length === 0) {
+                  // Notify user if result was empty to avoid them waiting for ever
+                  showEmptyResultModal();
                 }
-              } else {
-                buildContentAsync(result).then(() => {
-                  if (result.length === 1) {
-                    selectionManager.addOrHighlightItem(result[0]);
-                  } else if (result.length > 1) {
-                    selectionManager.addItems(result);
+                if (isCtrlKeyPressed) {
+                  if (result.length > 0) {
+                    selectionManager.removeItems(result);
                   }
-                });
-              }
-              const modalLinks = document.getElementsByClassName('o-identify-link-modal');
-              for (let i = 0; i < modalLinks.length; i += 1) {
-                viewer.getFeatureinfo().addLinkListener(modalLinks[i]);
-              }
-            })
-            .finally(() => {
-              hideSpinner();
-            });
+                } else {
+                  buildContentAsync(result).then(() => {
+                    if (result.length === 1) {
+                      selectionManager.addOrHighlightItem(result[0]);
+                    } else if (result.length > 1) {
+                      selectionManager.addItems(result);
+                    }
+                  });
+                }
+                const modalLinks = document.getElementsByClassName('o-identify-link-modal');
+                for (let i = 0; i < modalLinks.length; i += 1) {
+                  viewer.getFeatureinfo().addLinkListener(modalLinks[i]);
+                }
+              })
+              .finally(() => {
+                hideSpinner();
+              });
+          }
         }
         return false;
       }
@@ -918,7 +919,7 @@ const Multiselect = function Multiselect(options = {}) {
   }
 
   /**
-   * Eventhandler for click when selecting by feature. Selects the feature to select by. If click hits severat features
+   * Eventhandler for click when selecting by feature. Selects the feature to select by. If click hits several features
    * a modal is displayed.
    * @param {any} evt
    */
